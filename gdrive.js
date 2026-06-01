@@ -2,8 +2,8 @@
 // This allows the app to store a hidden configuration file on the user's personal Google Drive.
 
 // TODO: Replace these with your actual credentials from Google Cloud Console
-const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID_HERE';
-const API_KEY = 'YOUR_GOOGLE_API_KEY_HERE';
+const CLIENT_ID = '202960005617-pkti921f235sfkaul9kre2boueu3nu8j.apps.googleusercontent.com';
+const API_KEY = 'AIzaSyDdHqBQTOA1HzpNrGeKjOlj7_beZ9rxu0o';
 
 // Scope for application data folder
 const SCOPES = 'https://www.googleapis.com/auth/drive.appdata';
