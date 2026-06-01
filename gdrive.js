@@ -1,7 +1,6 @@
 // Google Drive Sync Logic using drive.appdata scope
 // This allows the app to store a hidden configuration file on the user's personal Google Drive.
 
-// TODO: Replace these with your actual credentials from Google Cloud Console
 const CLIENT_ID = '202960005617-pkti921f235sfkaul9kre2boueu3nu8j.apps.googleusercontent.com';
 const API_KEY = 'AIzaSyDdHqBQTOA1HzpNrGeKjOlj7_beZ9rxu0o';
 
@@ -15,20 +14,23 @@ let gapiInited = false;
 let gisInited = false;
 let fileId = null; // The ID of the database file on Google Drive
 
-// Expose initialize methods to window so index.html can call them on script load
-window.gapiLoaded = function() {
-    gapi.load('client', initializeGapiClient);
-};
-
-window.gisLoaded = function() {
-    tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPES,
-        callback: '', // defined later in handleAuthClick
-    });
-    gisInited = true;
-    checkIfReady();
-};
+// Polling to fix race conditions with async scripts
+function waitForGoogleAPIs() {
+    if (window.gapi && window.google) {
+        gapi.load('client', initializeGapiClient);
+        
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: '', // defined later
+        });
+        gisInited = true;
+        checkIfReady();
+    } else {
+        setTimeout(waitForGoogleAPIs, 100);
+    }
+}
+waitForGoogleAPIs(); // Start polling
 
 async function initializeGapiClient() {
     try {
@@ -45,7 +47,6 @@ async function initializeGapiClient() {
 
 function checkIfReady() {
     if (gapiInited && gisInited) {
-        // Dispatch an event so the UI knows Google APIs are ready
         window.dispatchEvent(new Event('google_api_ready'));
     }
 }
@@ -57,8 +58,14 @@ function checkIfReady() {
 export function loginGoogle() {
     return new Promise((resolve, reject) => {
         if (!CLIENT_ID || CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID_HERE') {
-            alert('Google Client ID is not configured. The developer needs to add this in gdrive.js');
+            alert('Google Client ID is not configured.');
             reject('Unconfigured Client ID');
+            return;
+        }
+        
+        if (!tokenClient) {
+            alert('Google Login is still initializing. Please wait a moment and try again.');
+            reject('tokenClient not initialized');
             return;
         }
 
@@ -87,18 +94,20 @@ export function loginGoogle() {
 }
 
 export function logoutGoogle() {
-    const token = gapi.client.getToken();
-    if (token !== null) {
-        google.accounts.oauth2.revoke(token.access_token, () => {
-            gapi.client.setToken('');
-            fileId = null;
-            window.dispatchEvent(new Event('google_logged_out'));
-        });
+    if (gapi && gapi.client) {
+        const token = gapi.client.getToken();
+        if (token !== null) {
+            google.accounts.oauth2.revoke(token.access_token, () => {
+                gapi.client.setToken('');
+                fileId = null;
+                window.dispatchEvent(new Event('google_logged_out'));
+            });
+        }
     }
 }
 
 export function isGoogleLoggedIn() {
-    return gapi.client && gapi.client.getToken() !== null;
+    return gapi && gapi.client && gapi.client.getToken() !== null;
 }
 
 // -----------------------------------------------------------------------------
@@ -107,7 +116,6 @@ export function isGoogleLoggedIn() {
 
 async function findOrCreateDatabase() {
     try {
-        // Search for the file in the hidden appDataFolder
         const response = await gapi.client.drive.files.list({
             spaces: 'appDataFolder',
             q: `name='${FILENAME}'`,
@@ -116,14 +124,11 @@ async function findOrCreateDatabase() {
         
         const files = response.result.files;
         if (files && files.length > 0) {
-            console.log('Database found on Google Drive.');
             fileId = files[0].id;
         } else {
-            console.log('Database not found. Creating a new one on Google Drive...');
             fileId = await createEmptyDatabase();
         }
     } catch (err) {
-        console.error('Error finding/creating database', err);
         throw err;
     }
 }
@@ -144,7 +149,6 @@ async function createEmptyDatabase() {
         subscriptions: [],
         debts: []
     };
-    
     return await saveToDrive(defaultData, true);
 }
 
@@ -152,16 +156,13 @@ export async function loadDataFromDrive() {
     if (!fileId) {
         throw new Error("No fileId available. Make sure to login first.");
     }
-
     try {
         const response = await gapi.client.drive.files.get({
             fileId: fileId,
             alt: 'media'
         });
-        
-        return response.result; // This will be the parsed JSON object
+        return response.result;
     } catch (err) {
-        console.error('Error loading data from Drive', err);
         throw err;
     }
 }
@@ -188,11 +189,11 @@ export async function saveToDrive(dataObj, isNewFile = false) {
         close_delim;
 
     let path = '/upload/drive/v3/files';
-    let method = 'POST'; // POST for creating new
+    let method = 'POST';
 
     if (!isNewFile && fileId) {
         path += '/' + fileId;
-        method = 'PATCH'; // PATCH for updating existing
+        method = 'PATCH';
     }
 
     try {
@@ -209,16 +210,13 @@ export async function saveToDrive(dataObj, isNewFile = false) {
         return new Promise((resolve, reject) => {
             request.execute(function(file) {
                 if (file.error) {
-                    console.error('Error saving to Drive:', file.error);
                     reject(file.error);
                 } else {
-                    console.log('Saved to Drive successfully.');
                     resolve(file.id);
                 }
             });
         });
     } catch (err) {
-        console.error('Exception during saveToDrive:', err);
         throw err;
     }
 }
