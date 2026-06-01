@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Money flow app</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- PapaParse for CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+
+    <!-- Google APIs -->
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+</head>
+<body>
+    
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="modal-overlay flex" style="z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);">
+        <div class="modal-content card" style="max-width: 400px; text-align: center; padding: 40px;">
+            <div style="font-size: 48px; color: var(--primary); margin-bottom: 16px;">
+                <i class="ph ph-cloud-check"></i>
+            </div>
+            <h2 style="margin-bottom: 8px;">Welcome to Money Flow</h2>
+            <p style="color: var(--text-muted); margin-bottom: 24px;">Please sign in with Google to sync your financial data securely to your personal Drive.</p>
+            <button id="btn-google-login" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 1.1em; padding: 12px;">
+                <i class="ph ph-google-logo"></i> Sign in with Google
+            </button>
+            <p id="login-error-msg" style="color: var(--danger); font-size: 0.9em; margin-top: 16px; display: none;"></p>
+        </div>
+    </div>
+
+    <div id="csv-preview-modal" class="modal-overlay hidden">
+        <div class="modal-content card" style="max-width: 800px; width: 90%; max-height: 80vh; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 data-i18n="csv_preview_title">Preview Import Data</h2>
+                <button class="close-btn" id="btn-close-csv-preview"><i class="ph ph-x"></i></button>
+            </div>
+            
+            <p style="color: var(--text-muted); margin-bottom: 16px;" id="csv-preview-info">Please review the transactions before confirming import.</p>
+            
+            <div style="flex: 1; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 24px;">
+                <table class="ledger-table" style="margin-top: 0; min-width: 600px;">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Category</th>
+                            <th>Description</th>
+                            <th>Amount</th>
+                            <th>Bank</th>
+                        </tr>
+                    </thead>
+                    <tbody id="csv-preview-body">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: auto;">
+                <button type="button" class="btn btn-secondary" id="btn-cancel-csv-preview" data-i18n="btn_cancel">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btn-confirm-csv-preview" data-i18n="btn_confirm">Confirm Import</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Toggle Button (Visible only when sidebar is hidden) -->
+    <button id="btn-show-sidebar" class="sidebar-toggle-floating">
+        <i class="ph ph-list"></i>
+    </button>
+
+    <!-- App Container -->
+    <div id="app-container" class="hidden">
+        
+        <!-- Sidebar -->
+        <aside class="app-sidebar" id="sidebar">
+            <div class="sidebar-logo" id="btn-hide-sidebar" title="Click to hide sidebar">
+                <div class="sidebar-logo-content">
+                    <div class="sidebar-logo-icon">
+                        <i class="ph ph-currency-dollar"></i>
+                    </div>
+                    <div class="sidebar-logo-text">
+                        <span data-i18n="app_title">Money flow app</span>
+                        <small id="theme-subtitle">Emerald Gold</small>
+                    </div>
+                </div>
+                <button class="collapse-btn"><i class="ph ph-caret-left"></i></button>
+            </div>
+
+            <div class="nav-section-title" data-i18n="nav_overview">Overview</div>
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-target="view-dashboard">
+                    <i class="ph ph-squares-four"></i> <span data-i18n="nav_dashboard">Dashboard</span>
+                </button>
+                <button class="nav-item" data-target="view-calendar">
+                    <i class="ph ph-calendar-blank"></i> <span data-i18n="nav_calendar">Calendar</span>
+                </button>
+            </nav>
+
+            <div class="nav-section-title" data-i18n="nav_money_in_out">Money In & Out</div>
+            <nav class="sidebar-nav">
+                <button class="nav-item" data-target="view-bank-accounts">
+                    <i class="ph ph-bank"></i> <span data-i18n="nav_bank">Bank Accounts</span>
+                </button>
+                <button class="nav-item" data-target="view-transactions">
+                    <i class="ph ph-list-dashes"></i> <span data-i18n="nav_transactions">Transactions</span>
+                </button>
+                <button class="nav-item" data-target="view-recurring">
+                    <i class="ph ph-arrows-clockwise"></i> <span data-i18n="nav_recurring">Recurring</span>
+                </button>
+            </nav>
+
+            <div class="nav-section-title" data-i18n="nav_wealth">Wealth Building</div>
+            <nav class="sidebar-nav">
+                <button class="nav-item" data-target="view-budgets">
+                    <i class="ph ph-chart-pie-slice"></i> <span data-i18n="nav_budgets">Budgets</span>
+                </button>
+                <button class="nav-item" data-target="view-debt-tracker">
+                    <i class="ph ph-receipt"></i> <span data-i18n="nav_debt">Debt Tracker</span>
+                </button>
+                <button class="nav-item" data-target="view-categories">
+                    <i class="ph ph-tag"></i> <span data-i18n="nav_categories">Categories</span>
+                </button>
+                <button class="nav-item" data-target="view-settings">
+                    <i class="ph ph-gear"></i> <span data-i18n="nav_settings">Settings</span>
+                </button>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="app-main" id="main-content">
+
+            <!-- Dashboard View -->
+            <div id="view-dashboard" class="view-section">
+                
+                <div class="welcome-banner" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px;">
+                    <div>
+                        <h1 data-i18n="dash_title">Dashboard</h1>
+                        <p id="daily-quote" data-i18n="loading_quote">Welcome back! Loading motivation...</p>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 8px;">
+                        <!-- Quick Presets -->
+                        <div style="display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end;">
+                            <button class="dash-preset-btn btn btn-outline" data-preset="today" style="padding: 4px 10px; font-size: 0.8rem;">Today</button>
+                            <button class="dash-preset-btn btn btn-outline" data-preset="week" style="padding: 4px 10px; font-size: 0.8rem;">This Week</button>
+                            <button class="dash-preset-btn btn btn-outline active" data-preset="month" style="padding: 4px 10px; font-size: 0.8rem;">This Month</button>
+                            <button class="dash-preset-btn btn btn-outline" data-preset="year" style="padding: 4px 10px; font-size: 0.8rem;">This Year</button>
+                            <button class="dash-preset-btn btn btn-outline" data-preset="all" style="padding: 4px 10px; font-size: 0.8rem;">All Time</button>
+                        </div>
+                        <!-- Date Range Inputs -->
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem;">
+                            <input type="date" id="dash-date-start" class="form-input" style="padding: 5px 10px; font-size: 0.85rem;">
+                            <span style="color: var(--text-muted);">→</span>
+                            <input type="date" id="dash-date-end" class="form-input" style="padding: 5px 10px; font-size: 0.85rem;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Row Metrics -->
+                <div class="top-summary">
+                    <div class="card summary-card">
+                        <span class="summary-title" data-i18n="metric_credit">Total Credit</span>
+                        <span class="summary-value" id="val-income">Rp 0</span>
+                        <span class="summary-subtext" id="subtext-income" data-i18n="sub_this_month">This month</span>
+                    </div>
+                    <div class="card summary-card">
+                        <span class="summary-title" data-i18n="metric_debit">Total Debit</span>
+                        <span class="summary-value" id="val-outcome">Rp 0</span>
+                        <span class="summary-subtext" id="subtext-outcome" data-i18n="sub_this_month">This month</span>
+                    </div>
+                    <div class="card summary-card">
+                        <span class="summary-title" data-i18n="metric_net">Net Balance</span>
+                        <span class="summary-value" id="val-netbalance">Rp 0</span>
+                        <span class="summary-subtext" data-i18n="sub_remaining">Remaining</span>
+                    </div>
+                    <div class="card summary-card">
+                        <span class="summary-title" data-i18n="metric_savings">Savings Rate</span>
+                        <span class="summary-value" id="val-savings">0%</span>
+                        <span class="summary-subtext" data-i18n="sub_of_credit">of credit</span>
+                    </div>
+                </div>
+
+                <!-- Middle Row Metrics -->
+                <div class="middle-metrics" style="margin-top: 24px;">
+                    <div class="card metric-card">
+                        <span class="summary-title" data-i18n="metric_largest">Largest Debit</span>
+                        <div class="metric-value-row">
+                            <i class="ph-fill ph-check-circle"></i>
+                            <span class="val" id="val-largest-exp">None</span>
+                        </div>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="summary-title" data-i18n="metric_avg">Daily Avg Spend</span>
+                        <div class="metric-value-row">
+                            <span class="val text-danger" id="val-avg-spend">Rp 0</span>
+                            <span class="summary-subtext" id="subtext-avg">avg/day</span>
+                        </div>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="summary-title" data-i18n="metric_count">Transactions</span>
+                        <div class="metric-value-row">
+                            <span class="val" id="val-count">0</span>
+                            <span class="summary-subtext" id="subtext-count" data-i18n="sub_this_month">this month</span>
+                        </div>
+                    </div>
+                    <div class="card metric-card">
+                        <span class="summary-title">Subscriptions / Mo</span>
+                        <div class="metric-value-row">
+                            <span class="val" id="val-subscriptions">Rp 0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bottom Row Charts -->
+                <div class="charts-row" style="margin-top: 24px;">
+                    <!-- Bar Chart -->
+                    <div class="card chart-card">
+                        <div class="chart-header">
+                            <h3 data-i18n="chart_income_expense">Credit vs Debit</h3>
+                            <span id="chart-bar-period" style="font-size:0.8rem;color:var(--text-muted);"></span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="incomeVsExpenseChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Donut Chart -->
+                    <div class="card chart-card">
+                        <div class="chart-header">
+                            <h3 data-i18n="chart_spending_category">Spending by Category</h3>
+                            <span id="chart-donut-period" style="font-size:0.8rem;color:var(--text-muted);"></span>
+                        </div>
+                        <div class="chart-container donut-container">
+                            <canvas id="spendingCategoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <!-- Ledger Table -->
+                <div class="card" style="margin-top: 24px;">
+                    <div class="ledger-header" style="display: flex; justify-content: space-between; align-items: center;">
+                        <h3 data-i18n="ledger_title">Recent Transactions</h3>
+                        <button id="btn-add-transaction" class="btn btn-primary" data-i18n="modal_title">Add Transaction</button>
+                    </div>
+                    <table class="ledger-table">
+                        <thead>
+                            <tr>
+                                <th data-i18n="th_date">Date</th>
+                                <th data-i18n="th_desc">Description</th>
+                                <th data-i18n="th_category">Category</th>
+                                <th data-i18n="th_amount">Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ledger-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <!-- Transactions View -->
+            <div id="view-transactions" class="view-section hidden">
+                <div class="welcome-banner" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h1 data-i18n="trans_title">Transactions Ledger</h1>
+                        <p data-i18n="trans_desc">Search, filter, and review all your financial records.</p>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="btn-add-transaction-ledger" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px; margin-right: 16px;">
+                            <i class="ph ph-plus"></i> Add Transaction
+                        </button>
+                        <button id="btn-bulk-delete" class="btn btn-outline hidden" style="color: var(--danger); border-color: var(--danger); display: flex; align-items: center; gap: 8px;">
+                            <i class="ph ph-trash"></i> Delete Selected
+                        </button>
+                        <button id="btn-bulk-edit" class="btn btn-outline hidden" style="color: var(--primary); border-color: var(--primary); display: flex; align-items: center; gap: 8px; margin-left: 8px;">
+                            <i class="ph ph-pencil"></i> Edit Selected
+                        </button>
+                        <!-- Hidden File Input for Import -->
+                        <input type="file" id="input-csv-file" accept=".csv" style="display: none;">
+                        <button id="btn-import-csv-icon" class="btn btn-outline" style="display: flex; align-items: center; gap: 8px;">
+                            <i class="ph ph-upload"></i> Import CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <div class="filters-row">
+                        <div class="input-group" style="margin-bottom: 0; min-width: 140px;">
+                            <select id="filter-type">
+                                <option value="All" data-i18n="filter_all_types">All Types</option>
+                                <option value="income" data-i18n="lbl_credit">Credit</option>
+                                <option value="expense" data-i18n="lbl_debit">Debit</option>
+                            </select>
+                        </div>
+                        <div class="input-group" style="margin-bottom: 0; min-width: 160px;">
+                            <input type="text" id="filter-search" placeholder="Search description..." data-i18n="filter_search_ph">
+                        </div>
+                        <button id="btn-apply-filters" class="btn btn-primary" data-i18n="btn_filter">Filter</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 40px;"><input type="checkbox" id="check-all-tx"></th>
+                                    <th data-i18n="th_category">Category</th>
+                                    <th data-i18n="th_desc">Description</th>
+                                    <th data-i18n="th_date">Date</th>
+                                    <th data-i18n="th_account">Account</th>
+                                    <th data-i18n="th_type">Type</th>
+                                    <th style="text-align: right;" data-i18n="th_amount">Amount</th>
+                                    <th style="text-align: right;" data-i18n="th_action">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="full-ledger-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination-controls" style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="pagination-info" style="font-size: 0.9rem; color: var(--text-muted);">
+                            <span id="pagination-info"></span>
+                            <span data-i18n="pagination_items" style="margin-left: 16px;">Items per page</span>: 
+                            <select id="select-items-per-page" style="margin-left: 8px; padding: 4px 8px; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-body);">
+                                <option value="25">25</option>
+                                <option value="50">50</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
+                        <div class="pagination-buttons" style="display: flex; gap: 8px; align-items: center;">
+                            <button id="btn-prev-page" class="btn btn-outline" style="padding: 4px 12px;" data-i18n="btn_prev">Previous</button>
+                            <span id="pagination-page-display" style="font-size: 0.9rem;">Page 1</span>
+                            <button id="btn-next-page" class="btn btn-outline" style="padding: 4px 12px;" data-i18n="btn_next">Next</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories View -->
+            <div id="view-categories" class="view-section hidden">
+                <div class="welcome-banner">
+                    <h1 data-i18n="cat_title">Categories</h1>
+                    <p data-i18n="cat_desc">Manage your custom transaction categories.</p>
+                </div>
+                
+                <div class="card" style="max-width: 600px;">
+                    <div style="display: flex; gap: 12px; margin-bottom: 24px;">
+                        <input type="text" id="input-new-category" placeholder="New Category Name" data-i18n="cat_input_ph" style="flex: 1; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm);">
+                        <button id="btn-add-category" class="btn btn-primary" data-i18n="btn_add">Add</button>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 24px; margin-bottom: 12px;">
+                        <h3 style="font-size: 1.1rem; font-weight: 600;">Monthly Budgets</h3>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="cat-filter-month" style="font-size: 0.85rem; color: var(--text-muted);">Select Month:</label>
+                            <select id="cat-filter-month" class="form-input" style="padding: 5px 10px; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-color);">
+                            </select>
+                        </div>
+                    </div>
+                    <div style="padding: 0;">
+                        <table class="data-table" id="categories-table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Monthly Budget</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categories-list-tbody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= RECURRING VIEW ================= -->
+            <!-- Subscriptions View -->
+            <div id="view-recurring" class="view-section hidden">
+                <header class="header">
+                    <h2>Active Subscriptions</h2>
+                    <div class="user-profile">
+                        <i class="ph ph-user-circle" style="font-size: 32px; color: var(--text-muted);"></i>
+                    </div>
+                </header>
+                <div class="content-scroll">
+                    <div class="card">
+                        <h3 style="margin-bottom: 16px;">Add Subscription</h3>
+                        <form id="form-subscription" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: block; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted);">Name</label>
+                                <input type="text" id="sub-name" class="input-field" placeholder="e.g. Netflix" required>
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: block; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted);">Next Bill Date</label>
+                                <input type="date" id="sub-date" class="input-field" required>
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: block; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted);">Amount</label>
+                                <input type="number" id="sub-amount" class="input-field" placeholder="Amount" required min="0" step="0.01">
+                            </div>
+                            <div style="flex: 1; min-width: 150px;">
+                                <label style="display: block; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted);">Timeline</label>
+                                <select id="sub-timeline" class="input-field" required>
+                                    <option value="monthly">Monthly</option>
+                                    <option value="yearly">Yearly</option>
+                                    <option value="weekly">Weekly</option>
+                                </select>
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-primary" style="height: 42px;">Add</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card" style="margin-top: 24px; padding: 0;">
+                        <table class="data-table" id="subscriptions-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Next Bill Date</th>
+                                    <th>Amount</th>
+                                    <th>Timeline</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="subscriptions-list">
+                                <!-- Subscription rows -->
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="2" style="text-align:right; font-weight:bold;">Total / Month:</td>
+                                    <td colspan="3" id="subscriptions-table-total" class="text-danger" style="font-weight:bold; font-size: 1.1em;">Rp 0</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Debt Tracker View -->
+            <div id="view-debt-tracker" class="view-section hidden">
+                <header class="header">
+                    <h2>Debt Tracker</h2>
+                    <div class="user-profile">
+                        <i class="ph ph-user-circle" style="font-size: 32px; color: var(--text-muted);"></i>
+                    </div>
+                </header>
+                <div class="content-scroll">
+                    <div class="card">
+                        <h3 style="margin-bottom: 16px;">Add Debt Record</h3>
+                        <form id="form-debt" style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 130px;">
+                                <label style="display: block; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted);">Date</label>
+                                <input type="date" id="debt-date" class="input-field" required>
+                            </div>
+                            <div style="flex: 1; min-width: 130px;">
+                                <label style="display: block; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted);">Amount</label>
+                                <input type="number" id="debt-amount" class="input-field" placeholder="Amount" required min="0" step="0.01">
+                            </div>
+                            <div style="flex: 1; min-width: 130px;">
+                                <label style="display: block; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted);">Debt To</label>
+                                <input type="text" id="debt-to" class="input-field" placeholder="Person/Entity" required>
+                            </div>
+                            <div style="flex: 1; min-width: 130px;">
+                                <label style="display: block; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted);">Role</label>
+                                <select id="debt-role" class="input-field" required>
+                                    <option value="debitor">Debitor (I owe)</option>
+                                    <option value="lender">Lender (They owe me)</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1; min-width: 130px;">
+                                <label style="display: block; margin-bottom: 4px; font-size: 0.9em; color: var(--text-muted);">Status</label>
+                                <select id="debt-status" class="input-field" required>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="paid_off">Paid Off</option>
+                                </select>
+                            </div>
+                            <div>
+                                <button type="submit" class="btn btn-primary" style="height: 42px;">Add</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="card" style="margin-top: 24px; padding: 0;">
+                        <table class="data-table" id="debts-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Debt To</th>
+                                    <th>Amount</th>
+                                    <th>Role</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="debts-list">
+                                <!-- Debt rows -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= BANK ACCOUNTS VIEW ================= -->
+            <div id="view-bank-accounts" class="view-section hidden">
+                <div class="welcome-banner" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <div>
+                        <h1>Bank Accounts</h1>
+                        <p>Track balances across all your accounts.</p>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 0; min-width: 160px;">
+                        <select id="filter-bank-daterange">
+                            <option value="all">All Time</option>
+                            <option value="this_month">This Month</option>
+                            <option value="last_3_months">Last 3 Months</option>
+                            <option value="this_year">This Year</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom: 24px;">
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end;">
+                        <div class="input-group" style="margin-bottom: 0; flex: 2; min-width: 200px;">
+                            <label>Bank Name</label>
+                            <input type="text" id="input-new-bank" placeholder="e.g. Chase" style="padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); width: 100%;">
+                        </div>
+                        <div class="input-group" style="margin-bottom: 0; flex: 1; min-width: 120px;">
+                            <label>Initial Amount</label>
+                            <input type="number" id="input-new-bank-amount" placeholder="0.00" min="0" step="any" style="padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); width: 100%;">
+                        </div>
+                        <div class="input-group" style="margin-bottom: 0; flex: 1; min-width: 140px;">
+                            <label>Date</label>
+                            <input type="date" id="input-new-bank-date" style="padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius-sm); width: 100%;">
+                        </div>
+                        <button id="btn-add-bank" class="btn btn-primary" style="height: 42px; margin-bottom: 0;">Add Bank</button>
+                    </div>
+                </div>
+                
+                <div id="bank-cards-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px;">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Settings / Import View -->
+            <div id="view-settings" class="view-section hidden">
+                <div class="welcome-banner">
+                    <h1 data-i18n="set_title">Settings</h1>
+                    <p data-i18n="set_desc">Manage your account, appearance, and localization.</p>
+                </div>
+
+
+
+                <!-- Theme Switcher -->
+                <div class="card" style="max-width: 600px; margin-bottom: 24px;">
+                    <h3 style="margin-bottom: 16px;" data-i18n="set_appearance">Appearance</h3>
+                    <div class="input-group">
+                        <label data-i18n="lbl_theme">Color Theme</label>
+                        <select id="select-theme">
+                            <option value="theme-emerald-gold">Emerald Gold</option>
+                            <option value="theme-black-white">Black & White</option>
+                            <option value="theme-pink-purple">Pink Purple (Soft Pink)</option>
+                            <option value="theme-navy-orange">Navy Orange (Dark Sidebar)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Localization Switcher -->
+                <div class="card" style="max-width: 600px; margin-bottom: 24px;">
+                    <h3 style="margin-bottom: 16px;" data-i18n="set_localization">Localization</h3>
+                    <div class="input-group" style="margin-bottom: 16px;">
+                        <label data-i18n="lbl_currency">Currency Format</label>
+                        <select id="select-currency">
+                            <option value="USD">USD ($)</option>
+                            <option value="IDR">IDR (Rp)</option>
+                            <option value="EUR">EUR (€)</option>
+                            <option value="GBP">GBP (£)</option>
+                            <option value="JPY">JPY (¥)</option>
+                            <option value="AUD">AUD ($)</option>
+                            <option value="CAD">CAD ($)</option>
+                            <option value="SGD">SGD ($)</option>
+                        </select>
+                    </div>
+                    <div class="input-group" style="margin-bottom: 0;">
+                        <label data-i18n="lbl_language">Language</label>
+                        <select id="select-language">
+                            <option value="en">English</option>
+                            <option value="id">Bahasa Indonesia</option>
+                            <option value="zh">中文 (Chinese)</option>
+                            <option value="ja">日本語 (Japanese)</option>
+                            <option value="ko">한국어 (Korean)</option>
+                            <option value="ru">Русский (Russian)</option>
+                            <option value="ar">العربية (Arabic)</option>
+                        </select>
+                    </div>
+                </div>
+<div class="card" style="max-width: 600px; margin-bottom: 24px;">
+  <h3 style="margin-bottom: 16px;" data-i18n="set_backup">Local Data Backup</h3>
+  <div class="input-group" style="margin-bottom: 8px;">
+    <button id="btn-export-data" class="btn btn-primary" style="width: 100%;" data-i18n="btn_export">Export Data (JSON)</button>
+  </div>
+  <div class="input-group" style="margin-bottom: 8px;">
+    <input type="file" id="file-import-data" accept="application/json" style="display:none;" />
+    <button id="btn-import-data" class="btn btn-secondary" style="width: 100%;" data-i18n="btn_import">Import Data</button>
+  </div>
+  <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 8px;">
+    Export your current data to a JSON file and import it later to restore.
+  </p>
+</div>
+                <div class="card" style="max-width: 600px; border-color: var(--danger-light);">
+                    <h3 style="margin-bottom: 16px; color: var(--danger);" data-i18n="lbl_danger">Danger Zone</h3>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 16px;" data-i18n="lbl_danger_desc">Logout or wipe local device data.</p>
+                    <button id="btn-logout" class="btn btn-outline" style="color: var(--danger); border-color: var(--danger);" data-i18n="btn_logout">Logout / Reset Data</button>
+                </div>
+            </div>
+
+            <!-- Budgets View -->
+            <div id="view-budgets" class="view-section hidden">
+                <header class="header">
+                    <h2>Budgets</h2>
+                    <div class="user-profile">
+                        <i class="ph ph-user-circle" style="font-size: 32px; color: var(--text-muted);"></i>
+                    </div>
+                </header>
+                <div class="card" style="margin-bottom: 24px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                        <div>
+                            <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 4px;">Timeframe</h3>
+                            <p style="color: var(--text-muted); font-size: 0.85rem;">Select the period to compare actual usage against your monthly budget targets.</p>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 0.875rem;">
+                            <select id="budget-filter-month" class="form-input" style="padding: 5px 10px; font-size: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-color);">
+                                <option value="All">All Months</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="budgets-summary-container" style="margin-bottom: 24px;"></div>
+
+                <div id="budgets-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                    <!-- Budget cards will be dynamically rendered here -->
+                </div>
+            </div>
+            <!-- Calendar View -->
+            <div id="view-calendar" class="view-section hidden">
+                <div class="welcome-banner">
+                    <h1 data-i18n="cal_title">Calendar</h1>
+                    <p data-i18n="cal_desc">Overview of credit and debit.</p>
+                </div>
+                <div class="calendar-summary">
+                    <div class="card summary-card">
+                        <span class="summary-title" data-i18n="metric_credit">Total Credit</span>
+                        <span class="summary-value" id="val-income-calendar">Rp 0</span>
+                        <span class="summary-subtext" data-i18n="sub_this_month">This month</span>
+                    </div>
+                    <div class="card summary-card">
+                        <span class="summary-title" data-i18n="metric_debit">Total Debit</span>
+                        <span class="summary-value" id="val-outcome-calendar">Rp 0</span>
+                        <span class="summary-subtext" data-i18n="sub_this_month">This month</span>
+                    </div>
+                    <div class="card summary-card">
+                        <span class="summary-title" data-i18n="metric_net">Net Balance</span>
+                        <span class="summary-value" id="val-netbalance-calendar">Rp 0</span>
+                        <span class="summary-subtext" data-i18n="sub_remaining">Remaining</span>
+                    </div>
+                </div>
+                <!-- Calendar Layout Row -->
+                <div class="calendar-layout-row">
+                    <!-- Calendar Grid (Left) -->
+                    <div class="calendar-container card">
+                        <div class="calendar-header">
+                            <div class="calendar-nav-left">
+                                <button id="btn-prev-month" class="cal-nav-btn" title="Previous month"><i class="ph ph-caret-left"></i></button>
+                            </div>
+                            <div class="calendar-date-selectors">
+                                <select id="select-calendar-month" class="calendar-select"></select>
+                                <select id="select-calendar-year" class="calendar-select"></select>
+                            </div>
+                            <div class="calendar-nav-right">
+                                <button id="btn-today" class="cal-today-btn" title="Go to today" data-i18n="btn_today">Today</button>
+                                <button id="btn-next-month" class="cal-nav-btn" title="Next month"><i class="ph ph-caret-right"></i></button>
+                            </div>
+                        </div>
+                        <div id="calendar-grid" class="calendar-grid">
+                            <!-- Day headers and date cells injected via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Daily Details Panel (Right) -->
+                    <div class="daily-details-panel card">
+                        <div class="panel-header">
+                            <h3 id="panel-daily-title">Select a Date</h3>
+                            <span class="panel-daily-subtitle" id="panel-daily-subtitle"></span>
+                        </div>
+                        <div class="panel-daily-summary hidden" id="panel-daily-summary">
+                            <div class="panel-mini-stat income">
+                                <span class="mini-stat-label">Income</span>
+                                <span class="mini-stat-value" id="panel-daily-income">Rp 0</span>
+                            </div>
+                            <div class="panel-mini-stat expense">
+                                <span class="mini-stat-label">Expense</span>
+                                <span class="mini-stat-value" id="panel-daily-expense">Rp 0</span>
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <table class="data-table hidden" id="daily-details-table">
+                                <thead>
+                                    <tr>
+                                        <th>Description</th>
+                                        <th style="text-align:right;">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="daily-details-tbody">
+                                    <!-- Daily transactions injected here -->
+                                </tbody>
+                            </table>
+                            <div id="daily-details-empty" class="panel-empty-state">
+                                <i class="ph ph-calendar-blank" style="font-size: 2.5rem; margin-bottom: 8px; opacity: 0.3;"></i>
+                                <span>Click on a date to view transactions</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+
+    <!-- Edit Transaction Modal -->
+    <div id="transaction-modal" class="modal-overlay hidden">
+        <div class="modal-content card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <h2 id="modal-transaction-title" data-i18n="modal_title">Add Transaction</h2>
+                <button class="close-btn" id="btn-close-transaction"><i class="ph ph-x"></i></button>
+            </div>
+            <form id="form-transaction">
+                <input type="hidden" id="trans-id">
+                <div class="input-group">
+                    <label data-i18n="filter_type">Type</label>
+                    <select id="trans-type" required>
+                        <option value="expense" data-i18n="lbl_debit">Debit</option>
+                        <option value="income" data-i18n="lbl_credit">Credit</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label data-i18n="lbl_amount">Amount</label>
+                    <input type="number" id="trans-amount" required min="0">
+                </div>
+                <div class="input-group">
+                    <label data-i18n="th_desc">Description</label>
+                    <input type="text" id="trans-desc" required>
+                </div>
+                <div class="input-group">
+                    <label data-i18n="th_category">Category</label>
+                    <input type="text" id="trans-category" required list="categories-list">
+                    <datalist id="categories-list">
+                        <!-- populated dynamically -->
+                    </datalist>
+                </div>
+                <div class="input-group">
+                    <label data-i18n="filter_account">Account</label>
+                    <input type="text" id="trans-account" required list="accounts-list">
+                    <datalist id="accounts-list">
+                        <option value="Checking"></option>
+                        <option value="Credit Card"></option>
+                    </datalist>
+                </div>
+                <div class="input-group">
+                    <label data-i18n="th_date">Date</label>
+                    <input type="date" id="trans-date" required>
+                </div>
+                <div style="margin-top: 24px;">
+                    <button type="submit" class="btn btn-primary" style="width:100%" data-i18n="btn_save">Save Transaction</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Bulk Edit Modal -->
+    <div id="bulk-edit-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Bulk Edit Transactions</h2>
+                <button class="close-btn" id="btn-close-bulk-edit"><i class="ph ph-x"></i></button>
+            </div>
+            <form id="form-bulk-edit">
+                <div class="input-group">
+                    <label>Category (optional)</label>
+                    <select id="bulk-edit-category" style="width:100%">
+                        <option value="">-- Keep Existing --</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Account (optional)</label>
+                    <select id="bulk-edit-account" style="width:100%">
+                        <option value="">-- Keep Existing --</option>
+                    </select>
+                </div>
+                <div style="margin-top: 24px; display:flex; gap:8px;">
+                    <button type="submit" class="btn btn-primary" style="flex:1">Apply Changes</button>
+                    <button type="button" class="btn btn-outline" id="btn-cancel-bulk-edit" style="flex:1" data-i18n="btn_cancel">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module" src="gdrive.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
