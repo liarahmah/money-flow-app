@@ -105,10 +105,13 @@ document.addEventListener('DOMContentLoaded', () => {
     // However, google api loads asynchronously.
 });
 
-window.addEventListener('google_api_ready', () => {
+window.addEventListener('google_api_ready', async () => {
     // API is loaded, check if we need to show login
     if (!isGoogleLoggedIn()) {
         document.getElementById('login-overlay').classList.remove('hidden');
+    } else {
+        document.getElementById('login-overlay').classList.add('hidden');
+        await initialLoadFromBackend();
     }
 });
 
