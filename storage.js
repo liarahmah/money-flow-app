@@ -1,6 +1,11 @@
 // storage.js - Google Drive is the single source of truth.
 import { loadDataFromDrive, saveToDrive } from './gdrive.js';
 
+// setStorageMode is a no-op stub kept for compatibility with app.js import
+export function setStorageMode(mode) {
+    // Google Drive is always the storage backend
+}
+
 // ─── Internal state ──────────────────────────────────────────────────────────
 let _transactions = [];
 let _categories = [];
