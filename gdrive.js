@@ -175,9 +175,11 @@ export async function saveToDrive(dataObj, isNewFile = false) {
     const contentType = 'application/json';
     const metadata = {
         name: FILENAME,
-        mimeType: contentType,
-        parents: ['appDataFolder']
+        mimeType: contentType
     };
+    if (isNewFile || !fileId) {
+        metadata.parents = ['appDataFolder'];
+    }
 
     const multipartRequestBody =
         delimiter +
