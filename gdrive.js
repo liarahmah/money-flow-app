@@ -45,8 +45,24 @@ async function initializeGapiClient() {
     }
 }
 
-function checkIfReady() {
+async function checkIfReady() {
     if (gapiInited && gisInited) {
+        const savedTokenStr = localStorage.getItem('wimm_google_token');
+        let restored = false;
+        if (savedTokenStr) {
+            try {
+                const savedData = JSON.parse(savedTokenStr);
+                if (Date.now() < savedData.expiresAt) {
+                    gapi.client.setToken(savedData.token);
+                    await findOrCreateDatabase();
+                    restored = true;
+                } else {
+                    localStorage.removeItem('wimm_google_token');
+                }
+            } catch (e) {
+                localStorage.removeItem('wimm_google_token');
+            }
+        }
         window.dispatchEvent(new Event('google_api_ready'));
     }
 }
@@ -75,6 +91,13 @@ export function loginGoogle() {
                     reject(resp);
                     throw (resp);
                 }
+                
+                const tokenObj = gapi.client.getToken();
+                localStorage.setItem('wimm_google_token', JSON.stringify({
+                    token: tokenObj,
+                    expiresAt: Date.now() + (resp.expires_in * 1000)
+                }));
+                
                 // Token acquired successfully
                 await findOrCreateDatabase();
                 resolve();
@@ -94,6 +117,7 @@ export function loginGoogle() {
 }
 
 export function logoutGoogle() {
+    localStorage.removeItem('wimm_google_token');
     if (gapi && gapi.client) {
         const token = gapi.client.getToken();
         if (token !== null) {
