@@ -44,7 +44,7 @@
         </div>
     </div>
 
-        <script>
+    <script>
         // PIN logic runs as plain script, completely independent of app.js modules
         (function() {
             var CORRECT_PIN = 'ETSY2026';
@@ -68,6 +68,12 @@
                     input.focus();
                 }
             });
+
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') btn.click();
+            });
+        })();
+    </script>
 
             input.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') btn.click();
