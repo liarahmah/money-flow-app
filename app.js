@@ -127,10 +127,8 @@ if (btnGoogleLogin) {
             await initialLoadFromBackend();
         } catch (err) {
             console.error(err);
-            document.getElementById('login-error-msg').innerText = "Login 
-                failed: " + (err.message || JSON.stringify(err));
-            document.getElementById('login-error-msg').style.display = 
-                'block';
+            document.getElementById('login-error-msg').innerText = "Login failed: " + (err.message || JSON.stringify(err));
+            document.getElementById('login-error-msg').style.display = 'block';
         }
     });
 }
