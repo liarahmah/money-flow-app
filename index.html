@@ -217,12 +217,12 @@
                 <!-- Top Row Metrics -->
                 <div class="top-summary">
                     <div class="card summary-card">
-                        <span class="summary-title" data-i18n="metric_credit">Total Credit</span>
+                        <span class="summary-title" data-i18n="metric_credit">Total Income</span>
                         <span class="summary-value" id="val-income">Rp 0</span>
                         <span class="summary-subtext" id="subtext-income" data-i18n="sub_this_month">This month</span>
                     </div>
                     <div class="card summary-card">
-                        <span class="summary-title" data-i18n="metric_debit">Total Debit</span>
+                        <span class="summary-title" data-i18n="metric_debit">Total Expense</span>
                         <span class="summary-value" id="val-outcome">Rp 0</span>
                         <span class="summary-subtext" id="subtext-outcome" data-i18n="sub_this_month">This month</span>
                     </div>
@@ -234,14 +234,14 @@
                     <div class="card summary-card">
                         <span class="summary-title" data-i18n="metric_savings">Savings Rate</span>
                         <span class="summary-value" id="val-savings">0%</span>
-                        <span class="summary-subtext" data-i18n="sub_of_credit">of credit</span>
+                        <span class="summary-subtext" data-i18n="sub_of_credit">of Income</span>
                     </div>
                 </div>
 
                 <!-- Middle Row Metrics -->
                 <div class="middle-metrics" style="margin-top: 24px;">
                     <div class="card metric-card">
-                        <span class="summary-title" data-i18n="metric_largest">Largest Debit</span>
+                        <span class="summary-title" data-i18n="metric_largest">Largest Expense</span>
                         <div class="metric-value-row">
                             <i class="ph-fill ph-check-circle"></i>
                             <span class="val" id="val-largest-exp">None</span>
@@ -274,7 +274,7 @@
                     <!-- Bar Chart -->
                     <div class="card chart-card">
                         <div class="chart-header">
-                            <h3 data-i18n="chart_income_expense">Credit vs Debit</h3>
+                            <h3 data-i18n="chart_income_expense">Income vs Expense</h3>
                             <span id="chart-bar-period" style="font-size:0.8rem;color:var(--text-muted);"></span>
                         </div>
                         <div class="chart-container">
@@ -346,8 +346,8 @@
                         <div class="input-group" style="margin-bottom: 0; min-width: 140px;">
                             <select id="filter-type">
                                 <option value="All" data-i18n="filter_all_types">All Types</option>
-                                <option value="income" data-i18n="lbl_credit">Credit</option>
-                                <option value="expense" data-i18n="lbl_debit">Debit</option>
+                                <option value="income" data-i18n="lbl_credit">Income</option>
+                                <option value="expense" data-i18n="lbl_debit">Expense</option>
                             </select>
                         </div>
                         <div class="input-group" style="margin-bottom: 0; min-width: 160px;">
@@ -704,16 +704,16 @@
             <div id="view-calendar" class="view-section hidden">
                 <div class="welcome-banner">
                     <h1 data-i18n="cal_title">Calendar</h1>
-                    <p data-i18n="cal_desc">Overview of credit and debit.</p>
+                    <p data-i18n="cal_desc">Overview of Income and Expense</p>
                 </div>
                 <div class="calendar-summary">
                     <div class="card summary-card">
-                        <span class="summary-title" data-i18n="metric_credit">Total Credit</span>
+                        <span class="summary-title" data-i18n="metric_credit">Total Income</span>
                         <span class="summary-value" id="val-income-calendar">Rp 0</span>
                         <span class="summary-subtext" data-i18n="sub_this_month">This month</span>
                     </div>
                     <div class="card summary-card">
-                        <span class="summary-title" data-i18n="metric_debit">Total Debit</span>
+                        <span class="summary-title" data-i18n="metric_debit">Total Expense</span>
                         <span class="summary-value" id="val-outcome-calendar">Rp 0</span>
                         <span class="summary-subtext" data-i18n="sub_this_month">This month</span>
                     </div>
@@ -798,8 +798,8 @@
                 <div class="input-group">
                     <label data-i18n="filter_type">Type</label>
                     <select id="trans-type" required>
-                        <option value="expense" data-i18n="lbl_debit">Debit</option>
-                        <option value="income" data-i18n="lbl_credit">Credit</option>
+                        <option value="expense" data-i18n="lbl_debit">Expense</option>
+                        <option value="income" data-i18n="lbl_credit">Income</option>
                     </select>
                 </div>
                 <div class="input-group">
