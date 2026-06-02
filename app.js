@@ -9,31 +9,37 @@ import { getQuoteForState, updateQuoteUI } from './quotes.js';
 import { applyLanguage, translations } from './i18n.js';
 import { renderDashboard, formatCurrency, initDashboardDatePicker } from './dashboard.js';
 
-// PIN Check Logic
-const CORRECT_PIN = "ETSY2026";
-const pinOverlay = document.getElementById('pin-overlay');
-const btnSubmitPin = document.getElementById('btn-submit-pin');
-const pinInput = document.getElementById('pin-input');
-const pinErrorMsg = document.getElementById('pin-error-msg');
+// PIN Check Logic — runs after DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+    const CORRECT_PIN = "ETSY2026";
+    const pinOverlay = document.getElementById('pin-overlay');
+    const btnSubmitPin = document.getElementById('btn-submit-pin');
+    const pinInput = document.getElementById('pin-input');
+    const pinErrorMsg = document.getElementById('pin-error-msg');
 
-if (localStorage.getItem('wimm_vip_unlocked') === 'true') {
-    if (pinOverlay) pinOverlay.classList.add('hidden');
-}
+    if (!pinOverlay) return;
 
-if (btnSubmitPin) {
-    btnSubmitPin.addEventListener('click', () => {
-        if (pinInput.value.trim().toUpperCase() === CORRECT_PIN) {
-            localStorage.setItem('wimm_vip_unlocked', 'true');
-            pinOverlay.classList.add('hidden');
-        } else {
-            pinErrorMsg.style.display = 'block';
-            pinInput.value = '';
-        }
-    });
-    pinInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') btnSubmitPin.click();
-    });
-}
+    // If already unlocked, hide the PIN screen immediately
+    if (localStorage.getItem('wimm_vip_unlocked') === 'true') {
+        pinOverlay.classList.add('hidden');
+    }
+
+    if (btnSubmitPin) {
+        btnSubmitPin.addEventListener('click', () => {
+            if (pinInput.value.trim().toUpperCase() === CORRECT_PIN) {
+                localStorage.setItem('wimm_vip_unlocked', 'true');
+                pinOverlay.classList.add('hidden');
+            } else {
+                pinErrorMsg.style.display = 'block';
+                pinInput.value = '';
+                pinInput.focus();
+            }
+        });
+        pinInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') btnSubmitPin.click();
+        });
+    }
+});
 
 // DOM Elements
 const appContainer = document.getElementById('app-container');
@@ -385,8 +391,9 @@ navItems.forEach(item => {
 // Settings (Logout / Reset)
 if (btnLogout) {
     btnLogout.addEventListener('click', () => {
-        const confirmLogout = confirm("Do you want to sign out of Google Drive sync?");
+        const confirmLogout = confirm("Do you want to sign out? You will need to enter the access code and sign in with Google again next time.");
         if (confirmLogout) {
+            localStorage.removeItem('wimm_vip_unlocked');
             logoutGoogle();
         }
     });
