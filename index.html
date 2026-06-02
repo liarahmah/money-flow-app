@@ -43,6 +43,37 @@
             <p id="pin-error-msg" style="color: var(--danger); font-size: 0.9em; margin-top: 16px; display: none;">Incorrect access code. Please try again.</p>
         </div>
     </div>
+
+        <script>
+        // PIN logic runs as plain script, completely independent of app.js modules
+        (function() {
+            var CORRECT_PIN = 'ETSY2026';
+            var overlay = document.getElementById('pin-overlay');
+            var btn = document.getElementById('btn-submit-pin');
+            var input = document.getElementById('pin-input');
+            var errMsg = document.getElementById('pin-error-msg');
+
+            // Already unlocked before — hide immediately
+            if (localStorage.getItem('wimm_vip_unlocked') === 'true') {
+                overlay.style.display = 'none';
+            }
+
+            btn.addEventListener('click', function() {
+                if (input.value.trim().toUpperCase() === CORRECT_PIN) {
+                    localStorage.setItem('wimm_vip_unlocked', 'true');
+                    overlay.style.display = 'none';
+                } else {
+                    errMsg.style.display = 'block';
+                    input.value = '';
+                    input.focus();
+                }
+            });
+
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') btn.click();
+            });
+        })();
+    </script>
     
     <!-- Login Overlay -->
     <div id="login-overlay" class="modal-overlay flex" style="z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);">
