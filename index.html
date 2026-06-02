@@ -27,6 +27,22 @@
     <script async defer src="https://accounts.google.com/gsi/client"></script>
 </head>
 <body>
+
+        <!-- VIP PIN Overlay -->
+    <div id="pin-overlay" class="modal-overlay flex" style="z-index: 10000; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.95); backdrop-filter: blur(15px);">
+        <div class="modal-content card" style="max-width: 400px; text-align: center; padding: 40px;">
+            <div style="font-size: 48px; color: var(--primary); margin-bottom: 16px;">
+                <i class="ph ph-lock-key"></i>
+            </div>
+            <h2 style="margin-bottom: 8px;">Enter Access Code</h2>
+            <p style="color: var(--text-muted); margin-bottom: 24px;">Please enter the VIP access code provided in your purchase receipt.</p>
+            <input type="password" id="pin-input" class="form-control" placeholder="Enter PIN code" style="text-align: center; font-size: 1.2em; letter-spacing: 2px; margin-bottom: 16px;">
+            <button id="btn-submit-pin" class="btn btn-primary" style="width: 100%; display: flex; align-items: center; justify-content: center; font-size: 1.1em; padding: 12px;">
+                Unlock App
+            </button>
+            <p id="pin-error-msg" style="color: var(--danger); font-size: 0.9em; margin-top: 16px; display: none;">Incorrect access code. Please try again.</p>
+        </div>
+    </div>
     
     <!-- Login Overlay -->
     <div id="login-overlay" class="modal-overlay flex" style="z-index: 9999; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px);">
