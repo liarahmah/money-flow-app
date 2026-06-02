@@ -137,6 +137,7 @@ window.addEventListener('google_api_ready', async () => {
         document.getElementById('login-overlay').classList.remove('hidden');
     } else {
         document.getElementById('login-overlay').classList.add('hidden');
+        startApp('google');
         await initialLoadFromBackend();
     }
 });
@@ -148,11 +149,14 @@ if (btnGoogleLogin) {
             document.getElementById('login-error-msg').style.display = 'none';
             await loginGoogle();
             document.getElementById('login-overlay').classList.add('hidden');
+            startApp('google');
             await initialLoadFromBackend();
         } catch (err) {
             console.error(err);
-            document.getElementById('login-error-msg').innerText = "Login failed: " + (err.message || JSON.stringify(err));
-            document.getElementById('login-error-msg').style.display = 'block';
+            document.getElementById('login-error-msg').innerText = "Login 
+                failed: " + (err.message || JSON.stringify(err));
+            document.getElementById('login-error-msg').style.display = 
+                'block';
         }
     });
 }
