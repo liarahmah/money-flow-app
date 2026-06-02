@@ -49,6 +49,8 @@ async function checkIfReady() {
     if (gapiInited && gisInited) {
         const savedTokenStr = localStorage.getItem('wimm_google_token');
         let restored = false;
+        let needsRefresh = false;
+
         if (savedTokenStr) {
             try {
                 const savedData = JSON.parse(savedTokenStr);
@@ -57,12 +59,23 @@ async function checkIfReady() {
                     await findOrCreateDatabase();
                     restored = true;
                 } else {
-                    localStorage.removeItem('wimm_google_token');
+                    needsRefresh = true;
                 }
             } catch (e) {
                 localStorage.removeItem('wimm_google_token');
             }
         }
+        
+        if (needsRefresh) {
+            try {
+                await loginGoogle(true);
+                restored = true;
+            } catch (err) {
+                console.error("Silent refresh failed:", err);
+                localStorage.removeItem('wimm_google_token');
+            }
+        }
+        
         window.dispatchEvent(new Event('google_api_ready'));
     }
 }
@@ -71,7 +84,7 @@ async function checkIfReady() {
 // Authentication Flow
 // -----------------------------------------------------------------------------
 
-export function loginGoogle() {
+export function loginGoogle(silent = false) {
     return new Promise((resolve, reject) => {
         if (!CLIENT_ID || CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID_HERE') {
             alert('Google Client ID is not configured.');
@@ -98,16 +111,15 @@ export function loginGoogle() {
                     expiresAt: Date.now() + (resp.expires_in * 1000)
                 }));
                 
-                // Token acquired successfully
                 await findOrCreateDatabase();
                 resolve();
             };
-
-            if (gapi.client.getToken() === null) {
-                // Prompt user to select account
+            
+            if (silent) {
+                tokenClient.requestAccessToken({prompt: ''});
+            } else if (gapi.client.getToken() === null) {
                 tokenClient.requestAccessToken({prompt: 'consent'});
             } else {
-                // Skip consent if already authorized
                 tokenClient.requestAccessToken({prompt: ''});
             }
         } catch (err) {
