@@ -9,38 +9,6 @@ import { getQuoteForState, updateQuoteUI } from './quotes.js';
 import { applyLanguage, translations } from './i18n.js';
 import { renderDashboard, formatCurrency, initDashboardDatePicker } from './dashboard.js';
 
-// PIN Check Logic — ES modules are deferred, so DOM is already ready here
-{
-    const CORRECT_PIN = "ETSY2026";
-    const pinOverlay = document.getElementById('pin-overlay');
-    const btnSubmitPin = document.getElementById('btn-submit-pin');
-    const pinInput = document.getElementById('pin-input');
-    const pinErrorMsg = document.getElementById('pin-error-msg');
-
-    if (pinOverlay) {
-        // If already unlocked, hide the PIN screen immediately
-        if (localStorage.getItem('wimm_vip_unlocked') === 'true') {
-            pinOverlay.classList.add('hidden');
-        }
-
-        if (btnSubmitPin) {
-            btnSubmitPin.addEventListener('click', () => {
-                if (pinInput.value.trim().toUpperCase() === CORRECT_PIN) {
-                    localStorage.setItem('wimm_vip_unlocked', 'true');
-                    pinOverlay.classList.add('hidden');
-                } else {
-                    pinErrorMsg.style.display = 'block';
-                    pinInput.value = '';
-                    pinInput.focus();
-                }
-            });
-            pinInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') btnSubmitPin.click();
-            });
-        }
-    }
-}
-
 // DOM Elements
 const appContainer = document.getElementById('app-container');
 
