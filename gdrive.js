@@ -12,17 +12,15 @@ const FILENAME = 'money_flow_database.json';
 let tokenClient;
 let gapiInited = false;
 let gisInited = false;
-let fileId = null; // The ID of the database file on Google Drive
+let fileId = null;
 
-// Polling to fix race conditions with async scripts
 function waitForGoogleAPIs() {
     if (window.gapi && window.google) {
         gapi.load('client', initializeGapiClient);
-        
         tokenClient = google.accounts.oauth2.initTokenClient({
             client_id: CLIENT_ID,
             scope: SCOPES,
-            callback: '', // defined later
+            callback: '',
         });
         gisInited = true;
         checkIfReady();
@@ -30,7 +28,7 @@ function waitForGoogleAPIs() {
         setTimeout(waitForGoogleAPIs, 100);
     }
 }
-waitForGoogleAPIs(); // Start polling
+waitForGoogleAPIs();
 
 async function initializeGapiClient() {
     try {
@@ -48,7 +46,6 @@ async function initializeGapiClient() {
 async function checkIfReady() {
     if (gapiInited && gisInited) {
         const savedTokenStr = localStorage.getItem('wimm_google_token');
-        let restored = false;
         let needsRefresh = false;
 
         if (savedTokenStr) {
@@ -57,7 +54,6 @@ async function checkIfReady() {
                 if (Date.now() < savedData.expiresAt) {
                     gapi.client.setToken(savedData.token);
                     await findOrCreateDatabase();
-                    restored = true;
                 } else {
                     needsRefresh = true;
                 }
@@ -65,24 +61,19 @@ async function checkIfReady() {
                 localStorage.removeItem('wimm_google_token');
             }
         }
-        
+
         if (needsRefresh) {
             try {
                 await loginGoogle(true);
-                restored = true;
             } catch (err) {
                 console.error("Silent refresh failed:", err);
                 localStorage.removeItem('wimm_google_token');
             }
         }
-        
+
         window.dispatchEvent(new Event('google_api_ready'));
     }
 }
-
-// -----------------------------------------------------------------------------
-// Authentication Flow
-// -----------------------------------------------------------------------------
 
 export function loginGoogle(silent = false) {
     return new Promise((resolve, reject) => {
@@ -91,30 +82,26 @@ export function loginGoogle(silent = false) {
             reject('Unconfigured Client ID');
             return;
         }
-        
         if (!tokenClient) {
             alert('Google Login is still initializing. Please wait a moment and try again.');
             reject('tokenClient not initialized');
             return;
         }
-
         try {
             tokenClient.callback = async (resp) => {
                 if (resp.error !== undefined) {
                     reject(resp);
                     throw (resp);
                 }
-                
                 const tokenObj = gapi.client.getToken();
                 localStorage.setItem('wimm_google_token', JSON.stringify({
                     token: tokenObj,
                     expiresAt: Date.now() + (resp.expires_in * 1000)
                 }));
-                
                 await findOrCreateDatabase();
                 resolve();
             };
-            
+
             if (silent) {
                 tokenClient.requestAccessToken({prompt: ''});
             } else if (gapi.client.getToken() === null) {
@@ -146,10 +133,6 @@ export function isGoogleLoggedIn() {
     return gapi && gapi.client && gapi.client.getToken() !== null;
 }
 
-// -----------------------------------------------------------------------------
-// Drive API Operations
-// -----------------------------------------------------------------------------
-
 async function findOrCreateDatabase() {
     try {
         const response = await gapi.client.drive.files.list({
@@ -157,7 +140,6 @@ async function findOrCreateDatabase() {
             q: `name='${FILENAME}'`,
             fields: 'files(id, name)'
         });
-        
         const files = response.result.files;
         if (files && files.length > 0) {
             fileId = files[0].id;
@@ -209,10 +191,7 @@ export async function saveToDrive(dataObj, isNewFile = false) {
     const close_delim = "\r\n--" + boundary + "--";
 
     const contentType = 'application/json';
-    const metadata = {
-        name: FILENAME,
-        mimeType: contentType
-    };
+    const metadata = { name: FILENAME, mimeType: contentType };
     if (isNewFile || !fileId) {
         metadata.parents = ['appDataFolder'];
     }
@@ -244,7 +223,6 @@ export async function saveToDrive(dataObj, isNewFile = false) {
             },
             body: multipartRequestBody
         });
-        
         return new Promise((resolve, reject) => {
             request.execute(function(file) {
                 if (file.error) {
