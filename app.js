@@ -9,6 +9,32 @@ import { getQuoteForState, updateQuoteUI } from './quotes.js';
 import { applyLanguage, translations } from './i18n.js';
 import { renderDashboard, formatCurrency, initDashboardDatePicker } from './dashboard.js';
 
+// PIN Check Logic
+const CORRECT_PIN = "ETSY2026";
+const pinOverlay = document.getElementById('pin-overlay');
+const btnSubmitPin = document.getElementById('btn-submit-pin');
+const pinInput = document.getElementById('pin-input');
+const pinErrorMsg = document.getElementById('pin-error-msg');
+
+if (localStorage.getItem('wimm_vip_unlocked') === 'true') {
+    if (pinOverlay) pinOverlay.classList.add('hidden');
+}
+
+if (btnSubmitPin) {
+    btnSubmitPin.addEventListener('click', () => {
+        if (pinInput.value.trim().toUpperCase() === CORRECT_PIN) {
+            localStorage.setItem('wimm_vip_unlocked', 'true');
+            pinOverlay.classList.add('hidden');
+        } else {
+            pinErrorMsg.style.display = 'block';
+            pinInput.value = '';
+        }
+    });
+    pinInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') btnSubmitPin.click();
+    });
+}
+
 // DOM Elements
 const appContainer = document.getElementById('app-container');
 
